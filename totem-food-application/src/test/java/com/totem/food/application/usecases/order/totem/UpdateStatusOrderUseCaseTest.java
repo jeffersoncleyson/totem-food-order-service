@@ -12,6 +12,7 @@ import com.totem.food.application.ports.out.persistence.commons.IUpdateRepositor
 import com.totem.food.application.ports.out.persistence.customer.CustomerModel;
 import com.totem.food.application.ports.out.persistence.order.totem.OrderModel;
 import com.totem.food.application.ports.out.persistence.payment.PaymentModel;
+import com.totem.food.application.ports.out.web.ISendRequestPort;
 import com.totem.food.application.usecases.commons.IUpdateStatusUseCase;
 import com.totem.food.domain.order.enums.OrderStatusEnumDomain;
 import lombok.SneakyThrows;
@@ -54,7 +55,7 @@ class UpdateStatusOrderUseCaseTest {
     @Mock
     private ISendEmailPort<EmailNotificationDto, Boolean> iSendEmailPort;
     @Mock
-    private ISearchRepositoryPort<PaymentFilterDto, List<PaymentModel>> iSearchPaymentRepositoryPort;
+    private ISendRequestPort<PaymentFilterDto, List<PaymentModel>> iSendRequestPaymentPort;
 
     @Mock
     private ISearchUniqueRepositoryPort<Optional<CustomerModel>> iSearchUniqueCustomerRepositoryPort;
@@ -70,7 +71,7 @@ class UpdateStatusOrderUseCaseTest {
                 iSearchUniqueRepositoryPort,
                 iProductRepositoryPort,
                 iSendEmailPort,
-                iSearchPaymentRepositoryPort,
+                iSendRequestPaymentPort,
                 iSearchUniqueCustomerRepositoryPort
         );
     }
@@ -132,7 +133,7 @@ class UpdateStatusOrderUseCaseTest {
 
         //## Mocks
         when(iSearchUniqueRepositoryPort.findById(Mockito.anyString())).thenReturn(Optional.of(orderDomain));
-        when(iSearchPaymentRepositoryPort.findAll(Mockito.any(PaymentFilterDto.class))).thenReturn(List.of(paymentDomain));
+        when(iSendRequestPaymentPort.sendRequest(Mockito.any(PaymentFilterDto.class))).thenReturn(List.of(paymentDomain));
 
         //## When
         final var exception = assertThrows(ElementNotFoundException.class, () -> iUpdateStatusUseCase.updateStatus(orderDomain.getId(), OrderStatusEnumDomain.RECEIVED.key));
@@ -149,7 +150,7 @@ class UpdateStatusOrderUseCaseTest {
 
         //## Mocks
         when(iSearchUniqueRepositoryPort.findById(Mockito.anyString())).thenReturn(Optional.of(orderDomain));
-        when(iSearchPaymentRepositoryPort.findAll(Mockito.any(PaymentFilterDto.class))).thenReturn(null);
+        when(iSendRequestPaymentPort.sendRequest(Mockito.any(PaymentFilterDto.class))).thenReturn(null);
 
         //## When
         final var exceptions = assertThrows(
@@ -159,7 +160,7 @@ class UpdateStatusOrderUseCaseTest {
 
         //## Then
         verify(iSearchUniqueRepositoryPort, times(1)).findById(Mockito.anyString());
-        verify(iSearchPaymentRepositoryPort, times(1)).findAll(Mockito.any(PaymentFilterDto.class));
+        verify(iSendRequestPaymentPort, times(1)).sendRequest(Mockito.any(PaymentFilterDto.class));
         assertEquals(
                 String.format("Order [%s] needs a payment request or Payment is PENDING",
                         orderDomain.getId()), exceptions.getMessage()
@@ -185,7 +186,7 @@ class UpdateStatusOrderUseCaseTest {
         //## Then
         verify(iOrderMapper, times(1)).toDto(any());
         verify(iSearchUniqueRepositoryPort, times(1)).findById(Mockito.anyString());
-        verify(iSearchPaymentRepositoryPort, times(0)).findAll(Mockito.any(PaymentFilterDto.class));
+        verify(iSendRequestPaymentPort, times(0)).sendRequest(Mockito.any(PaymentFilterDto.class));
         verify(iProductRepositoryPort, times(1)).updateItem(Mockito.any(OrderModel.class));
         verify(iSendEmailPort, times(1)).sendEmail(Mockito.any(EmailNotificationDto.class));
 
