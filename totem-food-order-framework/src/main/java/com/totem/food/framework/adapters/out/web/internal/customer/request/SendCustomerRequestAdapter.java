@@ -5,6 +5,7 @@ import com.totem.food.application.ports.out.web.ISendRequestPort;
 import com.totem.food.framework.adapters.out.web.internal.customer.client.CustomerMicroServiceClientApi;
 import com.totem.food.framework.adapters.out.web.internal.payment.client.PaymentMicroServiceClientApi;
 import lombok.AllArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -16,7 +17,8 @@ public class SendCustomerRequestAdapter implements ISendRequestPort<String, Opti
     private final CustomerMicroServiceClientApi customerMicroServiceClientApi;
 
     @Override
-    public Optional<CustomerResponse> sendRequest(String item) {
-        return Optional.empty();
+    public Optional<CustomerResponse> sendRequest(String cpf) {
+        return Optional.ofNullable(customerMicroServiceClientApi.getCustomerByCpf(cpf))
+                .map(ResponseEntity::getBody);
     }
 }

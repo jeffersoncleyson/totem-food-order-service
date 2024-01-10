@@ -64,8 +64,7 @@ public class CreateOrderUseCase implements ICreateWithIdentifierUseCase<OrderCre
         if(StringUtils.isNotEmpty(identifier)) {
             final var customerResponse = iSearchUniqueCustomerRepositoryPort.sendRequest(identifier)
                     .orElseThrow(() -> new ElementNotFoundException(String.format("Customer [%s] not found", identifier)));
-            //@todo - refact set customerId base on customerResponse
-            //domain.setCustomer(customerDomain);
+            domain.setCustomer(customerResponse.getCpf());
         }
     }
 

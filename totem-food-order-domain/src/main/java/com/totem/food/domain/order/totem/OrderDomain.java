@@ -32,7 +32,9 @@ public class OrderDomain {
     private String id;
 
     //@todo - refact @Setter
-    //@todo - refact private CustomerDomain customer;
+
+    @Setter
+    private String customer;
 
     @Setter
     private List<ProductDomain> products;

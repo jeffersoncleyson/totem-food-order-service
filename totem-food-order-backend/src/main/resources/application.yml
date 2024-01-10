@@ -56,6 +56,6 @@ cognito:
 ms:
   internal:
     payment:
-      url: ${MS_INTERNAL_PAYMENT:http://localhost:8081}
+      url: ${MS_INTERNAL_PAYMENT:http://localhost:8082}
     customer:
-      url: ${MS_INTERNAL_CUSTOMER:http://localhost:8082}
+      url: ${MS_INTERNAL_CUSTOMER:http://localhost:8081}
