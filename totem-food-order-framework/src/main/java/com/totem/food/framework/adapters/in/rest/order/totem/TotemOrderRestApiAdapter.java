@@ -7,11 +7,12 @@ import com.totem.food.application.ports.in.dtos.order.totem.OrderFilterDto;
 import com.totem.food.application.ports.in.dtos.order.totem.OrderUpdateDto;
 import com.totem.food.application.ports.in.rest.ICreateRestApiPort;
 import com.totem.food.application.ports.in.rest.ISearchRestApiPort;
+import com.totem.food.application.ports.in.rest.ISearchUniqueRestApiPort;
 import com.totem.food.application.ports.in.rest.IUpdateRestApiPort;
 import com.totem.food.application.ports.in.rest.IUpdateStatusRestApiPort;
 import com.totem.food.application.usecases.commons.IContextUseCase;
-import com.totem.food.application.usecases.commons.ICreateUseCase;
 import com.totem.food.application.usecases.commons.ICreateWithIdentifierUseCase;
+import com.totem.food.application.usecases.commons.ISearchUniqueUseCase;
 import com.totem.food.application.usecases.commons.ISearchUseCase;
 import com.totem.food.application.usecases.commons.IUpdateStatusUseCase;
 import com.totem.food.application.usecases.commons.IUpdateUseCase;
@@ -42,13 +43,15 @@ import static com.totem.food.framework.adapters.in.rest.constants.Routes.TOTEM_O
 public class TotemOrderRestApiAdapter implements ICreateRestApiPort<OrderCreateDto, ResponseEntity<OrderDto>>,
         ISearchRestApiPort<OrderFilterDto, ResponseEntity<List<OrderDto>>>,
         IUpdateRestApiPort<OrderUpdateDto, ResponseEntity<OrderDto>>,
-        IUpdateStatusRestApiPort<ResponseEntity<OrderDto>> {
+        IUpdateStatusRestApiPort<ResponseEntity<OrderDto>>,
+        ISearchUniqueRestApiPort<String, ResponseEntity<OrderDto>> {
 
     private final ICreateWithIdentifierUseCase<OrderCreateDto, OrderDto> iCreateUseCase;
     private final ISearchUseCase<OrderFilterDto, List<OrderDto>> iSearchProductUseCase;
     private final IUpdateUseCase<OrderUpdateDto, OrderDto> iUpdateUseCase;
     private final IUpdateStatusUseCase<OrderDto> iUpdateStatusUseCase;
     private final IContextUseCase<XUserIdentifierContextDto, String> iContextUseCase;
+    private final ISearchUniqueUseCase<String, Optional<OrderDto>> iSearchUniqueUseCase;
 
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -80,5 +83,13 @@ public class TotemOrderRestApiAdapter implements ICreateRestApiPort<OrderCreateD
     public ResponseEntity<OrderDto> update(@PathVariable(name = "orderId") String id, @PathVariable(name = "statusName") String status) {
         final var orderDto = iUpdateStatusUseCase.updateStatus(id, status);
         return ResponseEntity.status(HttpStatus.OK).body(orderDto);
+    }
+
+    @GetMapping(value = ORDER_ID, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
+    public ResponseEntity<OrderDto> getById(@PathVariable("orderId") String orderId) {
+        return iSearchUniqueUseCase.item(orderId)
+                .map(items -> ResponseEntity.status(HttpStatus.OK).body(items))
+                .orElse(ResponseEntity.noContent().build());
     }
 }

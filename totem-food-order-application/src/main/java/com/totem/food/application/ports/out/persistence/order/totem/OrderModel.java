@@ -20,8 +20,7 @@ public class OrderModel {
     @Setter
     private String id;
 
-    //@todo - refact @Setter
-    //@todo - refact private CustomerDomain customer;
+    private String customer;
 
     @Setter
     private List<ProductDomain> products;

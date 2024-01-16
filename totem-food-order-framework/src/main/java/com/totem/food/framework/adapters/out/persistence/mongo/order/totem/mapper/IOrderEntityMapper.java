@@ -12,11 +12,7 @@ import org.mapstruct.ReportingPolicy;
 public interface IOrderEntityMapper {
 
 	@Mapping(source = "status.key", target = "status")
-//	@Mapping(source = "customer.cpf", target = "cpf")
-	//@todo - rafact mapper acima
 	OrderEntity toEntity(OrderModel input);
 
-//	@Mapping(source = "cpf", target = "customer.cpf")
-//@todo - rafact mapper acima
 	OrderModel toModel(OrderEntity input);
 }

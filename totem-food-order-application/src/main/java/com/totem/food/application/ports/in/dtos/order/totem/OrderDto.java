@@ -16,7 +16,8 @@ import java.util.List;
 public class OrderDto {
 
     private String id;
-    private String customerId;
+    //private String customerId;
+    private String customer;
     private List<ProductDto> products;
     private String status;
     private double price;

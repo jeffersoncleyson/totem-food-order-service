@@ -24,7 +24,7 @@ public class OrderEntity {
     @Id
     private String id;
 
-    private String cpf;
+    private String customer;
 
     @DBRef
     private List<ProductEntity> products;

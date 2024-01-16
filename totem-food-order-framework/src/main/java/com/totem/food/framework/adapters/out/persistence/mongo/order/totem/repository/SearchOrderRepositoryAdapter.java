@@ -25,7 +25,7 @@ public class SearchOrderRepositoryAdapter implements ISearchRepositoryPort<Order
     @Repository
     protected interface OrderRepositoryMongoDB extends BaseRepository<OrderEntity, String> {
 
-        @Query("{'cpf' : ?0}")
+        @Query("{'customer' : ?0}")
         List<OrderEntity> findByFilter(String cpf);
 
         @Query("{'status': {$in: ?0}}")

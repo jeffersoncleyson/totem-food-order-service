@@ -10,6 +10,7 @@ import com.totem.food.application.ports.in.dtos.order.totem.OrderUpdateDto;
 import com.totem.food.application.ports.in.dtos.product.ProductDto;
 import com.totem.food.application.usecases.commons.IContextUseCase;
 import com.totem.food.application.usecases.commons.ICreateWithIdentifierUseCase;
+import com.totem.food.application.usecases.commons.ISearchUniqueUseCase;
 import com.totem.food.application.usecases.commons.ISearchUseCase;
 import com.totem.food.application.usecases.commons.IUpdateStatusUseCase;
 import com.totem.food.application.usecases.commons.IUpdateUseCase;
@@ -33,6 +34,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.totem.food.domain.order.enums.OrderStatusEnumDomain.NEW;
@@ -79,12 +81,22 @@ class TotemOrderRestApiAdapterTest {
     @Mock
     private IContextUseCase<XUserIdentifierContextDto, String> iContextUseCase;
 
+    @Mock
+    private ISearchUniqueUseCase<String, Optional<OrderDto>> iSearchUniqueUseCase;
+
     private TotemOrderRestApiAdapter totemOrderRestApiAdapter;
 
     @BeforeEach
     void setUp() {
         autoCloseable = MockitoAnnotations.openMocks(this);
-        this.totemOrderRestApiAdapter = new TotemOrderRestApiAdapter(iCreateUseCase, iSearchProductUseCase, iUpdateUseCase, iUpdateStatusUseCase, iContextUseCase);
+        this.totemOrderRestApiAdapter = new TotemOrderRestApiAdapter(
+                iCreateUseCase,
+                iSearchProductUseCase,
+                iUpdateUseCase,
+                iUpdateStatusUseCase,
+                iContextUseCase,
+                iSearchUniqueUseCase
+        );
         mockMvc = MockMvcBuilders.standaloneSetup(totemOrderRestApiAdapter).build();
     }
 
@@ -105,7 +117,7 @@ class TotemOrderRestApiAdapterTest {
 
         var orderDto = new OrderDto();
         orderDto.setId("1");
-        orderDto.setCustomerId("123");
+        orderDto.setCustomer("123");
         orderDto.setProducts(List.of(ProductDto.builder().id("1").build()));
         orderDto.setStatus("NEW");
         orderDto.setPrice(25.0);
@@ -150,7 +162,7 @@ class TotemOrderRestApiAdapterTest {
         //## Mock - Object
         var orderDto = new OrderDto();
         orderDto.setId("1");
-        orderDto.setCustomerId("123");
+        orderDto.setCustomer("123");
         orderDto.setProducts(List.of(ProductDto.builder().id("1").build()));
         orderDto.setStatus("NEW");
         orderDto.setPrice(25.0);
@@ -197,7 +209,7 @@ class TotemOrderRestApiAdapterTest {
         //## Mock - Object
         var orderDto = new OrderDto();
         orderDto.setId("1");
-        orderDto.setCustomerId("123");
+        orderDto.setCustomer("123");
         orderDto.setProducts(List.of(ProductDto.builder().id("1").build()));
         orderDto.setStatus("NEW");
         orderDto.setPrice(25.0);
@@ -241,7 +253,7 @@ class TotemOrderRestApiAdapterTest {
         //## Mock - Object
         var orderDto = new OrderDto();
         orderDto.setId("1");
-        orderDto.setCustomerId("123");
+        orderDto.setCustomer("123");
         orderDto.setProducts(List.of(ProductDto.builder().id("1").build()));
         orderDto.setStatus(WAITING_PAYMENT.toString());
         orderDto.setPrice(25.0);

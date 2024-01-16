@@ -31,8 +31,6 @@ public class OrderDomain {
     @Setter
     private String id;
 
-    //@todo - refact @Setter
-
     @Setter
     private String customer;
 

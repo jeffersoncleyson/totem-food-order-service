@@ -49,7 +49,6 @@ public class UpdateStatusOrderUseCase implements IUpdateStatusUseCase<OrderDto> 
 
         if (domain.getStatus().equals(OrderStatusEnumDomain.RECEIVED)) {
 
-            //@todo - findBy orderId and status COMPLETED
             final var paymentFilter = PaymentFilterDto.builder().orderId(domain.getId()).status("COMPLETED").build();
             final var hasPayment = iSendRequestPaymentPort.sendRequest(paymentFilter);
             if(!hasPayment)
@@ -57,14 +56,13 @@ public class UpdateStatusOrderUseCase implements IUpdateStatusUseCase<OrderDto> 
 
         }
 
-        final var domainValidated = iOrderMapper.toModel(domain);
-        final var domainSaved = iProductRepositoryPort.updateItem(domainValidated);
-
-        if (domainSaved.getStatus().equals(OrderStatusEnumDomain.READY)) {
-            final var customerId = ""; //@todo - get customerId from order
-            iSearchUniqueCustomerRepositoryPort.sendRequest(customerId)
+        if (domain.getStatus().equals(OrderStatusEnumDomain.READY)) {
+            iSearchUniqueCustomerRepositoryPort.sendRequest(domain.getCustomer())
                     .map(CustomerResponse::getEmail).ifPresent(sendEmail(id));
         }
+
+        final var domainValidated = iOrderMapper.toModel(domain);
+        final var domainSaved = iProductRepositoryPort.updateItem(domainValidated);
 
         return iOrderMapper.toDto(domainSaved);
     }
