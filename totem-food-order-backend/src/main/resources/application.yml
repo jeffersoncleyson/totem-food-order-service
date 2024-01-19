@@ -22,7 +22,7 @@ spring:
     default-property-inclusion: non_null
   data:
     mongodb:
-      uri: mongodb://root:qwe123@localhost:27017/totem-food?authSource=admin
+      uri: ${ORDER_MONGODB_URI:mongodb://root:qwe123@localhost:27017/totem-food?authSource=admin}
 
 payment:
   url: ${PAYMENT_GATEWAY_URL:https://api.mercadopago.com}
@@ -45,6 +45,7 @@ app:
   version: ^project.version^
   name: ^project.name^
   description: ^project.description^
+  inspect_beans: ${INSPECT_BEANS:false}
 
 
 cognito:

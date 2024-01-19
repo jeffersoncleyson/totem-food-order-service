@@ -20,6 +20,7 @@ public class OrderModel {
     @Setter
     private String id;
 
+    @Setter
     private String customer;
 
     @Setter
