@@ -22,14 +22,7 @@ spring:
     default-property-inclusion: non_null
   data:
     mongodb:
-      uri: ${ORDER_MONGODB_URI:mongodb://root:qwe123@localhost:27017/totem-food?authSource=admin}
-
-payment:
-  url: ${PAYMENT_GATEWAY_URL:https://api.mercadopago.com}
-  callback: ${PAYMENT_CALLBACK_URL:https://composed-firefly-willingly.ngrok-free.app/v1/totem/payment/callback}
-  store_id: ${STORE_ID:}
-  store_user_id: ${STORE_USER_ID:}
-  store_token_id: ${STORE_TOKEN:}
+      uri: ${ORDER_MONGODB_URI:mongodb://root:qwe123@localhost:27017/totem-food-order?authSource=admin}
 
 mail:
   smtp:
@@ -46,13 +39,6 @@ app:
   name: ^project.name^
   description: ^project.description^
   inspect_beans: ${INSPECT_BEANS:false}
-
-
-cognito:
-  userPool:
-    id: ${COGNITO_USER_POOL_ID:}
-    clientId: ${COGNITO_CLIENT_ID:}
-    clientSecret: ${COGNITO_CLIENT_SECRET:}
 
 ms:
   internal:

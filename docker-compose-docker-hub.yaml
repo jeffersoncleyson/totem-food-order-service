@@ -12,7 +12,7 @@ services:
     image: mongo:latest
     container_name: mongo-dev
     hostname: mongo-dev
-    env_file: .env
+    env_file: envs/mongo/.env
     ports:
       - "27017:27017"
     volumes:
@@ -30,7 +30,7 @@ services:
     container_name: totem-food-order-service
     hostname: totem-food-order-service
     image: jeffersoncleyson/totem-food-order-service:latest
-    env_file: .env
+    env_file: envs/order/.env
     ports:
       - "8080:8080"
       - "8780:8787" # DEBUG
@@ -43,7 +43,7 @@ services:
     container_name: totem-food-payment-service
     hostname: totem-food-payment-service
     image: jeffersoncleyson/totem-food-payment-service:latest
-    env_file: .env
+    env_file: envs/payment/.env
     ports:
       - "8082:8082"
       - "8782:8787" # DEBUG
@@ -56,7 +56,7 @@ services:
     container_name: totem-food-customer-service
     hostname: totem-food-customer-service
     image: jeffersoncleyson/totem-food-customer-service:latest
-    env_file: .env
+    env_file: envs/customer/.env
     ports:
       - "8081:8081"
       - "8781:8787" # DEBUG
