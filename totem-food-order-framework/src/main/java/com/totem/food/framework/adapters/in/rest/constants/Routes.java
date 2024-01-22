@@ -13,24 +13,11 @@ public class Routes {
     public static final String ADM_CATEGORY = "/administrative/category";
     public static final String CATEGORY_ID = "/{categoryId}";
 
-    //######## CUSTOMER
-    public static final String ADM_CUSTOMER = "/administrative/customer";
-    public static final String TOTEM_CUSTOMER = "/totem/customer";
-    public static final String TOTEM_LOGIN = "/totem/login";
-    public static final String CUSTOMER_ID = "/{cpf}";
-    public static final String CONFIRM_CUSTOMER = "/code/{code}";
-
     //######## ORDER
     public static final String ADM_ORDER = "/administrative/orders";
     public static final String TOTEM_ORDER = "/totem/order";
     public static final String ORDER_ID = "/{orderId}";
     public static final String ORDER_ID_AND_STATUS = "/{orderId}/status/{statusName}";
-
-    //######## PAYMENT
-    public static final String TOTEM_PAYMENT_CALLBACK = "/totem/payment/callback";
-    public static final String PAYMENT_ORDER_ID = "/order/{orderId}";
-    public static final String TOTEM_PAYMENT = "/totem/payment";
-    public static final String PAYMENT_ID = "/{paymentId}";
 
     //######## PRODUCT
     public static final String ADM_PRODUCT = "/administrative/product";
