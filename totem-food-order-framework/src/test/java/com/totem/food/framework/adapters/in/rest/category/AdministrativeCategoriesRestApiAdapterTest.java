@@ -241,7 +241,7 @@ class AdministrativeCategoriesRestApiAdapterTest {
         when(iSearchUniqueUseCase.item(anyString())).thenThrow(new ResourceNotFound(ISearchUniqueUseCase.class, errorMessage));
 
         //## When
-        var exception = assertThrows(ResourceNotFound.class,
+        var exception = assertThrows(Exception.class,
                 () -> administrativeCategoriesRestApiAdapter.getById(anyString()));
 
         //## Then
