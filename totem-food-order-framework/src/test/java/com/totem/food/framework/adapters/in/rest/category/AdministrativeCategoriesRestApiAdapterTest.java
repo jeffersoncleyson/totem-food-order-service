@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.totem.food.application.ports.in.dtos.category.CategoryCreateDto;
 import com.totem.food.application.ports.in.dtos.category.CategoryDto;
 import com.totem.food.application.ports.in.dtos.category.CategoryFilterDto;
-import com.totem.food.application.ports.in.mappers.category.ICategoryMapper;
 import com.totem.food.application.usecases.commons.ICreateUseCase;
 import com.totem.food.application.usecases.commons.IDeleteUseCase;
 import com.totem.food.application.usecases.commons.ISearchUniqueUseCase;
@@ -20,13 +19,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,11 +33,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import static com.totem.food.framework.adapters.in.rest.constants.Routes.ADM_CATEGORY;
 import static com.totem.food.framework.adapters.in.rest.constants.Routes.API_VERSION_1;
+import static com.totem.food.framework.adapters.in.rest.constants.Routes.CATEGORY_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.anyString;
@@ -56,9 +53,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ExtendWith(MockitoExtension.class)
 class AdministrativeCategoriesRestApiAdapterTest {
-
-    @Spy
-    private ICategoryMapper iCategoryMapper = Mappers.getMapper(ICategoryMapper.class);
 
     @Mock
     private ICreateUseCase<CategoryCreateDto, CategoryDto> iCreateCategoryUseCase;
@@ -204,62 +198,109 @@ class AdministrativeCategoriesRestApiAdapterTest {
         verify(iSearchCategoryUseCase, times(1)).items(null);
     }
 
-    @Test
-    void getCategoryByID() {
+    @ParameterizedTest
+    @ValueSource(strings = API_VERSION_1 + ADM_CATEGORY + CATEGORY_ID)
+    void getCategoryByID(String endpoint) throws Exception {
 
-        //## When
+        //## Mocks - Objects and Values
         var categoryDto = new CategoryDto("1", "Suco", ZonedDateTime.now(), ZonedDateTime.now());
-        when(iSearchUniqueUseCase.item(anyString())).thenReturn(categoryDto);
 
         //## Given
-        var responseEntity = administrativeCategoriesRestApiAdapter.getById(anyString());
+        when(iSearchUniqueUseCase.item(anyString())).thenReturn(categoryDto);
+
+        final MockHttpServletRequestBuilder httpServletRequest = MockMvcRequestBuilders.get(endpoint, categoryDto.getId())
+                .contentType(MediaType.APPLICATION_JSON);
+
+        //## When
+        final ResultActions resultActions = mockMvc.perform(httpServletRequest);
 
         //## Then
-        assertNotNull(responseEntity);
-        assertEquals(categoryDto, responseEntity.getBody());
-        assertEquals(HttpStatus.OK.value(), responseEntity.getStatusCodeValue());
+        resultActions.andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+        final String responseJson = resultActions.andReturn().getResponse().getContentAsString();
+
+        final var response = TestUtils.toObject(responseJson, CategoryDto.class).orElseThrow();
+
+        Assertions.assertThat(response)
+                .usingRecursiveComparison()
+                .ignoringFieldsOfTypes(ZonedDateTime.class)
+                .isEqualTo(categoryDto);
+
+        verify(iSearchUniqueUseCase, times(1)).item(categoryDto.getId());
     }
 
     @Test
     void getCategoryByIDWhenNotFound() {
 
-        //## When
-        when(iSearchUniqueUseCase.item(anyString())).thenThrow(ResourceNotFound.class);
+        //## Mocks - Objects and Values
+        final String errorMessage = "Not Found";
 
         //## Given
-        assertThrows(ResourceNotFound.class,
+        when(iSearchUniqueUseCase.item(anyString())).thenThrow(new ResourceNotFound(ISearchUniqueUseCase.class, errorMessage));
+
+        //## When
+        var exception = assertThrows(ResourceNotFound.class,
                 () -> administrativeCategoriesRestApiAdapter.getById(anyString()));
 
         //## Then
+        assertEquals(errorMessage, exception.getMessage());
         verify(iSearchUniqueUseCase, times(1)).item(anyString());
     }
 
-    @Test
-    void deleteCategoryByID() {
-
-        //## When - Given
-        var responseEntity = administrativeCategoriesRestApiAdapter.deleteById(anyString());
-
-        //## Then
-        verify(iDeleteCategoryUseCase).removeItem(anyString());
-        assertEquals(HttpStatus.NO_CONTENT.value(), responseEntity.getStatusCodeValue());
-    }
-
-    @Test
-    void updateCategory() {
-
-        //## When
-        var categoryCreateDto = new CategoryCreateDto("Suco");
-        var categoryDto = new CategoryDto("1", "Suco", ZonedDateTime.now(), ZonedDateTime.now());
-        when(iUpdateCategoryUseCase.updateItem(categoryCreateDto, "1")).thenReturn(categoryDto);
+    @ParameterizedTest
+    @ValueSource(strings = API_VERSION_1 + ADM_CATEGORY + CATEGORY_ID)
+    void deleteCategoryByID(String endpoint) throws Exception {
 
         //## Given
-        var responseEntity = administrativeCategoriesRestApiAdapter.update(categoryCreateDto, "1");
+        final MockHttpServletRequestBuilder httpServletRequest = MockMvcRequestBuilders.delete(endpoint, UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON);
+
+        //## When
+        final ResultActions resultActions = mockMvc.perform(httpServletRequest);
 
         //## Then
-        assertNotNull(responseEntity);
-        assertEquals(categoryDto, responseEntity.getBody());
-        assertEquals(HttpStatus.ACCEPTED.value(), responseEntity.getStatusCodeValue());
+        resultActions.andDo(print())
+                .andExpect(status().isNoContent());
+
+        verify(iDeleteCategoryUseCase).removeItem(anyString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = API_VERSION_1 + ADM_CATEGORY + CATEGORY_ID)
+    void updateCategory(String endpoint) throws Exception {
+
+        //## Mocks - Objects and Values
+        var categoryCreateDto = new CategoryCreateDto("Suco");
+        var categoryDto = new CategoryDto("1", "Suco", ZonedDateTime.now(), ZonedDateTime.now());
+
+        //## Given
+        when(iUpdateCategoryUseCase.updateItem(any(CategoryCreateDto.class), anyString())).thenReturn(categoryDto);
+
+        final String json = TestUtils.toJSON(categoryCreateDto).orElseThrow();
+        final MockHttpServletRequestBuilder httpServletRequest = MockMvcRequestBuilders.put(endpoint, categoryDto.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json);
+
+        //## When
+        final ResultActions resultActions = mockMvc.perform(httpServletRequest);
+
+        //## Then
+        resultActions.andDo(print())
+                .andExpect(status().isAccepted())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+        final String responseJson = resultActions.andReturn().getResponse().getContentAsString();
+
+        final var response = TestUtils.toObject(responseJson, CategoryDto.class).orElseThrow();
+
+        Assertions.assertThat(response)
+                .usingRecursiveComparison()
+                .ignoringFieldsOfTypes(ZonedDateTime.class)
+                .isEqualTo(categoryDto);
+
+        verify(iUpdateCategoryUseCase, times(1)).updateItem(any(CategoryCreateDto.class), anyString());
     }
 
 }
