@@ -7,7 +7,6 @@ import com.totem.food.application.ports.in.dtos.order.totem.OrderCreateDto;
 import com.totem.food.application.ports.in.dtos.order.totem.OrderDto;
 import com.totem.food.application.ports.in.dtos.order.totem.OrderFilterDto;
 import com.totem.food.application.ports.in.dtos.order.totem.OrderUpdateDto;
-import com.totem.food.application.ports.in.dtos.product.ProductDto;
 import com.totem.food.application.usecases.commons.IContextUseCase;
 import com.totem.food.application.usecases.commons.ICreateWithIdentifierUseCase;
 import com.totem.food.application.usecases.commons.ISearchUniqueUseCase;
@@ -16,6 +15,8 @@ import com.totem.food.application.usecases.commons.IUpdateStatusUseCase;
 import com.totem.food.application.usecases.commons.IUpdateUseCase;
 import com.totem.food.framework.test.utils.TestUtils;
 import lombok.SneakyThrows;
+import mocks.dtos.OrderDtoMock;
+import mocks.dtos.OrderFilterDtoMock;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +36,7 @@ import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
+import java.util.UUID;
 
 import static com.totem.food.domain.order.enums.OrderStatusEnumDomain.NEW;
 import static com.totem.food.domain.order.enums.OrderStatusEnumDomain.WAITING_PAYMENT;
@@ -84,12 +85,10 @@ class TotemOrderRestApiAdapterTest {
     @Mock
     private ISearchUniqueUseCase<String, Optional<OrderDto>> iSearchUniqueUseCase;
 
-    private TotemOrderRestApiAdapter totemOrderRestApiAdapter;
-
     @BeforeEach
     void setUp() {
         autoCloseable = MockitoAnnotations.openMocks(this);
-        this.totemOrderRestApiAdapter = new TotemOrderRestApiAdapter(
+        var totemOrderRestApiAdapter = new TotemOrderRestApiAdapter(
                 iCreateUseCase,
                 iSearchProductUseCase,
                 iUpdateUseCase,
@@ -115,12 +114,7 @@ class TotemOrderRestApiAdapterTest {
         var orderCreateDto = new OrderCreateDto();
         orderCreateDto.setProducts(List.of(new ItemQuantityDto(1, "produto")));
 
-        var orderDto = new OrderDto();
-        orderDto.setId("1");
-        orderDto.setCustomer("123");
-        orderDto.setProducts(List.of(ProductDto.builder().id("1").build()));
-        orderDto.setStatus("NEW");
-        orderDto.setPrice(25.0);
+        var orderDto = OrderDtoMock.getMock(NEW.toString());
 
         when(iContextUseCase.getContext()).thenReturn(customerId);
 
@@ -141,15 +135,14 @@ class TotemOrderRestApiAdapterTest {
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        final var result = resultActions.andReturn();
-        final var responseJson = result.getResponse().getContentAsString();
+        final var responseJson = resultActions.andReturn().getResponse().getContentAsString();
         final var orderDtoResponseOpt = TestUtils.toObject(responseJson, OrderDto.class);
         final var orderDtoResponse = orderDtoResponseOpt.orElseThrow();
 
-        assertThat(orderDto)
+        assertThat(orderDtoResponse)
                 .usingRecursiveComparison()
                 .ignoringFieldsOfTypes(ZonedDateTime.class)
-                .isNotNull();
+                .isEqualTo(orderDto);
 
         verify(iCreateUseCase, times(1)).createItem(any(OrderCreateDto.class), eq(customerId));
     }
@@ -160,18 +153,9 @@ class TotemOrderRestApiAdapterTest {
     void listAll(String endpoint) throws Exception {
 
         //## Mock - Object
-        var orderDto = new OrderDto();
-        orderDto.setId("1");
-        orderDto.setCustomer("123");
-        orderDto.setProducts(List.of(ProductDto.builder().id("1").build()));
-        orderDto.setStatus("NEW");
-        orderDto.setPrice(25.0);
+        var orderDto = OrderDtoMock.getMock(NEW.toString());
 
-        var orderFilterDto = OrderFilterDto.builder()
-                .cpf("123")
-                .orderId("1")
-                .status(Set.of("NEW"))
-                .build();
+        var orderFilterDto = OrderFilterDtoMock.getStatusNew();
 
         //## Given
         when(iSearchProductUseCase.items(any(OrderFilterDto.class))).thenReturn(Collections.singletonList(orderDto));
@@ -187,11 +171,9 @@ class TotemOrderRestApiAdapterTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        final var result = resultActions.andReturn();
-        final var responseJson = result.getResponse().getContentAsString();
-        final var orderDtoResponseOpt =
-                TestUtils.toTypeReferenceObject(responseJson, new TypeReference<List<OrderDto>>() {
-                });
+        final var responseJson = resultActions.andReturn().getResponse().getContentAsString();
+        final var orderDtoResponseOpt = TestUtils.toTypeReferenceObject(responseJson, new TypeReference<List<OrderDto>>() {
+        });
         final var orderDtoResponse = orderDtoResponseOpt.orElseThrow();
 
         assertThat(orderDtoResponse)
@@ -207,16 +189,10 @@ class TotemOrderRestApiAdapterTest {
     void update(String endpoint) throws Exception {
 
         //## Mock - Object
-        var orderDto = new OrderDto();
-        orderDto.setId("1");
-        orderDto.setCustomer("123");
-        orderDto.setProducts(List.of(ProductDto.builder().id("1").build()));
-        orderDto.setStatus("NEW");
-        orderDto.setPrice(25.0);
+        var orderDto = OrderDtoMock.getMock(NEW.toString());
 
         //## Given
-        when(iUpdateUseCase.updateItem(any(OrderUpdateDto.class), anyString()))
-                .thenReturn(orderDto);
+        when(iUpdateUseCase.updateItem(any(OrderUpdateDto.class), anyString())).thenReturn(orderDto);
 
         final var jsonOpt = TestUtils.toJSON(orderDto);
         final var json = jsonOpt.orElseThrow();
@@ -232,8 +208,7 @@ class TotemOrderRestApiAdapterTest {
                 .andExpect(status().isAccepted())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        final var result = resultActions.andReturn();
-        final var responseJson = result.getResponse().getContentAsString();
+        final var responseJson = resultActions.andReturn().getResponse().getContentAsString();
         final var orderDtoResponseOpt = TestUtils.toObject(responseJson, OrderDto.class);
         final var orderDtoResponse = orderDtoResponseOpt.orElseThrow();
 
@@ -247,22 +222,41 @@ class TotemOrderRestApiAdapterTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = ENDPOINT_ORDER_ID)
+    void updateWhenNotFound(String endpoint) throws Exception {
+
+        //## Mock - Object
+        var orderDto = OrderDtoMock.getMock(NEW.toString());
+
+        //## Given
+        when(iUpdateUseCase.updateItem(any(OrderUpdateDto.class), anyString())).thenReturn(null);
+
+        final var json = TestUtils.toJSON(orderDto).orElseThrow();
+        final var httpServletRequest = put(endpoint, orderDto.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json);
+
+        //### When
+        final var resultActions = mockMvc.perform(httpServletRequest);
+
+        //### Then
+        resultActions.andDo(print()).andExpect(status().isNotFound());
+
+        verify(iUpdateUseCase, times(1))
+                .updateItem(Mockito.any(OrderUpdateDto.class), anyString());
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ENDPOINT_ORDER_ID_STATUS_NAME)
     void updateStatus(String endpoint) throws Exception {
 
         //## Mock - Object
-        var orderDto = new OrderDto();
-        orderDto.setId("1");
-        orderDto.setCustomer("123");
-        orderDto.setProducts(List.of(ProductDto.builder().id("1").build()));
-        orderDto.setStatus(WAITING_PAYMENT.toString());
-        orderDto.setPrice(25.0);
+        var orderDto = OrderDtoMock.getMock(WAITING_PAYMENT.toString());
 
         //## Given
         when(iUpdateStatusUseCase.updateStatus(anyString(), anyString())).thenReturn(orderDto);
 
-        final var jsonOpt = TestUtils.toJSON(orderDto);
-        final var json = jsonOpt.orElseThrow();
+        final var json = TestUtils.toJSON(orderDto).orElseThrow();
         final var httpServletRequest = put(endpoint, orderDto.getId(), NEW.toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json);
@@ -275,8 +269,7 @@ class TotemOrderRestApiAdapterTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        final var result = resultActions.andReturn();
-        final var responseJson = result.getResponse().getContentAsString();
+        final var responseJson = resultActions.andReturn().getResponse().getContentAsString();
         final var orderDtoResponseOpt = TestUtils.toObject(responseJson, OrderDto.class);
         final var orderDtoResponse = orderDtoResponseOpt.orElseThrow();
 
@@ -290,5 +283,58 @@ class TotemOrderRestApiAdapterTest {
         verify(iUpdateStatusUseCase, times(1)).updateStatus(anyString(), anyString());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ENDPOINT_ORDER_ID)
+    void getById(String endpoint) throws Exception {
+
+        //## Mock - Object
+        String orderId = "1";
+        var orderDto = OrderDtoMock.getMock(NEW.toString());
+
+        //## Given
+        when(iSearchUniqueUseCase.item(anyString())).thenReturn(Optional.of(orderDto));
+
+        final var httpServletRequest = get(endpoint, orderId);
+
+        //### When
+        final var resultActions = mockMvc.perform(httpServletRequest);
+
+        //### Then
+        resultActions.andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+        final var responseJson = resultActions.andReturn().getResponse().getContentAsString();
+        final var orderDtoResponseOpt = TestUtils.toObject(responseJson, OrderDto.class);
+        final var orderDtoResponse = orderDtoResponseOpt.orElseThrow();
+
+        assertThat(orderDtoResponse)
+                .usingRecursiveComparison()
+                .ignoringFieldsOfTypes(ZonedDateTime.class)
+                .isEqualTo(orderDto);
+
+        verify(iSearchUniqueUseCase, times(1)).item(anyString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ENDPOINT_ORDER_ID)
+    void getByIdWhenNotContent(String endpoint) throws Exception {
+
+        //## Mock - Object
+        String orderId = UUID.randomUUID().toString();
+
+        //## Given
+        when(iSearchUniqueUseCase.item(anyString())).thenReturn(Optional.empty());
+
+        final var httpServletRequest = get(endpoint, orderId);
+
+        //### When
+        final var resultActions = mockMvc.perform(httpServletRequest);
+
+        //### Then
+        resultActions.andDo(print()).andExpect(status().isNoContent());
+
+        verify(iSearchUniqueUseCase, times(1)).item(anyString());
+    }
 
 }
