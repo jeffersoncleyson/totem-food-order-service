@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -41,7 +42,7 @@ public class CreateOrderUseCase implements ICreateWithIdentifierUseCase<OrderCre
     @Override
     public OrderDto createItem(OrderCreateDto item, String customerIdentifier) {
 
-        if(!item.isOrderValid()) {
+        if (!item.isOrderValid()) {
             throw new InvalidInput("Order is invalid");
         }
 
@@ -61,7 +62,7 @@ public class CreateOrderUseCase implements ICreateWithIdentifierUseCase<OrderCre
 
     private void setCustomer(String identifier, OrderDomain domain) {
 
-        if(StringUtils.isNotEmpty(identifier)) {
+        if (StringUtils.isNotEmpty(identifier)) {
             final var customerResponse = iSearchUniqueCustomerRepositoryPort.sendRequest(identifier)
                     .orElseThrow(() -> new ElementNotFoundException(String.format("Customer [%s] not found", identifier)));
             domain.setCustomer(customerResponse.getCpf());
@@ -69,25 +70,31 @@ public class CreateOrderUseCase implements ICreateWithIdentifierUseCase<OrderCre
     }
 
     private void setProductsToDomain(OrderCreateDto item, OrderDomain domain) {
-        if(CollectionUtils.isNotEmpty(item.getProducts())){
+        if (CollectionUtils.isNotEmpty(item.getProducts())) {
 
-            final var ids = item.getProducts().stream().map(ItemQuantityDto::getId).toList();
-            final var productFilterDto = ProductFilterDto.builder().ids(ids).build();
-            final var products = iSearchProductRepositoryPort.findAll(productFilterDto);
+            final List<String> ids = item.getProducts().stream().map(ItemQuantityDto::getId).toList();
 
-            if(CollectionUtils.size(item.getProducts()) != CollectionUtils.size(products)){
-                throw new ElementNotFoundException(String.format("Products [%s] some products are invalid", ids));
-            }
+            final ProductFilterDto productFilterDto = ProductFilterDto.builder().ids(ids).build();
 
-            final var productsDomainToAdd = getProductDomains(item, products);
+            final List<ProductModel> products = iSearchProductRepositoryPort.findAll(productFilterDto);
+
+            verifyProductValid(item, products, ids);
+
+            final List<ProductDomain> productsDomainToAdd = getProductDomains(item, products);
+
             domain.setProducts(productsDomainToAdd);
         }
     }
 
-    // TODO - Refatorar este método
+    private void verifyProductValid(OrderCreateDto item, List<ProductModel> products, List<String> ids) {
+        if (CollectionUtils.size(item.getProducts()) != CollectionUtils.size(products)) {
+            throw new ElementNotFoundException(String.format("Products [%s] some products are invalid", ids));
+        }
+    }
+
     private List<ProductDomain> getProductDomains(OrderCreateDto item, List<ProductModel> products) {
-        final var productDomainMap = products.stream().collect(Collectors.toMap(ProductModel::getId, iProductMapper::toDomain));
-        final var productsDomainToAdd = new ArrayList<ProductDomain>();
+        final Map<String, ProductDomain> productDomainMap = generateProductDomainMap(products);
+        final ArrayList<ProductDomain> productsDomainToAdd = new ArrayList<>();
 
         for (ItemQuantityDto itemX : item.getProducts()) {
             for (int i = 0; i < itemX.getQtd(); i++) {
@@ -96,4 +103,9 @@ public class CreateOrderUseCase implements ICreateWithIdentifierUseCase<OrderCre
         }
         return productsDomainToAdd;
     }
+
+    private Map<String, ProductDomain> generateProductDomainMap(List<ProductModel> products) {
+        return products.stream().collect(Collectors.toMap(ProductModel::getId, iProductMapper::toDomain));
+    }
+
 }
