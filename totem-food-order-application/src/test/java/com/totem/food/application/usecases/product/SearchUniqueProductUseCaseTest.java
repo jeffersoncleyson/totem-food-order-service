@@ -45,7 +45,7 @@ class SearchUniqueProductUseCaseTest {
 
     @SneakyThrows
     @AfterEach
-    void tearDown(){
+    void tearDown() {
         autoCloseable.close();
     }
 
@@ -53,7 +53,8 @@ class SearchUniqueProductUseCaseTest {
     void item() {
 
         //## Given
-        final var productDomain =  ProductModelMock.getMock();
+        String productId = "12345";
+        final var productDomain = ProductModelMock.getMock(productId);
         when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.of(productDomain));
 
         //## When

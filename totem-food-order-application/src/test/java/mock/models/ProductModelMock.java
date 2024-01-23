@@ -4,13 +4,12 @@ import com.totem.food.application.ports.out.persistence.product.ProductModel;
 import com.totem.food.domain.category.CategoryDomain;
 
 import java.time.ZonedDateTime;
-import java.util.UUID;
 
 public class ProductModelMock {
 
-    public static ProductModel getMock() {
+    public static ProductModel getMock(String id) {
         return ProductModel.builder()
-                .id(UUID.randomUUID().toString())
+                .id(id)
                 .name("Coca-cola")
                 .description("Sabor cola")
                 .image("URL")

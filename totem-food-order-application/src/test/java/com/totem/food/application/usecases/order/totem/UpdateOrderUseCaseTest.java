@@ -92,8 +92,9 @@ class UpdateOrderUseCaseTest {
     void updateItem() {
 
         //## Mock - Object
-        var productDomain = ProductDomainMock.getMock();
-        var productModel = ProductModelMock.getMock();
+        String productId = "12345";
+        var productDomain = ProductDomainMock.getMock(productId);
+        var productModel = ProductModelMock.getMock(productId);
         productModel.setId(productDomain.getId());
 
         var orderUpdateDto = OrderUpdateDtoMock.getMock(productDomain.getId());
