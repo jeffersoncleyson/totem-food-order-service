@@ -9,12 +9,12 @@ import java.util.List;
 
 public class OrderDtoMock {
 
-    public static OrderDto getMock() {
+    public static OrderDto getMock(String status) {
         var orderDto = new OrderDto();
         orderDto.setId("1");
         orderDto.setCustomerId("1");
         orderDto.setProducts(List.of(new ProductDto()));
-        orderDto.setStatus("NEW");
+        orderDto.setStatus(status);
         orderDto.setCreateAt(ZonedDateTime.now(ZoneOffset.UTC));
         orderDto.setModifiedAt(ZonedDateTime.now(ZoneOffset.UTC));
         return orderDto;

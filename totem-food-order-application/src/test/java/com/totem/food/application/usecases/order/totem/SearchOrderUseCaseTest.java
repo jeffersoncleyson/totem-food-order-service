@@ -61,7 +61,7 @@ class SearchOrderUseCaseTest {
         //## Mock - Objects
         var orderFilterDto = OrderFilterDto.builder().orderId("1").cpf("1").build();
         var orderDomain = OrderModelMock.orderModel(OrderStatusEnumDomain.NEW);
-        var orderDto = OrderDtoMock.getMock();
+        var orderDto = OrderDtoMock.getMock(OrderStatusEnumDomain.NEW.toString());
 
         //## Given
         when(iSearchOrderRepositoryPort.findAll(any())).thenReturn(List.of(orderDomain));
