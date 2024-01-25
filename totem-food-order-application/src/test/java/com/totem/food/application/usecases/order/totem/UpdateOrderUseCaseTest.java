@@ -84,7 +84,7 @@ class UpdateOrderUseCaseTest {
                 () -> updateOrderUseCase.updateItem(new OrderUpdateDto(), anyString()));
 
         //## Then
-        assertEquals(exception.getMessage(), "Order [] not found");
+        assertEquals("Order [] not found", exception.getMessage());
 
     }
 

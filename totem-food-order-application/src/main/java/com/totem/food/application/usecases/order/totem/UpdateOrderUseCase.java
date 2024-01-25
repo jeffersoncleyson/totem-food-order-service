@@ -20,6 +20,7 @@ import org.apache.commons.collections4.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -63,9 +64,7 @@ public class UpdateOrderUseCase implements IUpdateUseCase<OrderUpdateDto, OrderD
             final var productFilterDto = ProductFilterDto.builder().ids(ids).build();
             final var products = iSearchProductRepositoryPort.findAll(productFilterDto);
 
-            if (CollectionUtils.size(item.getProducts()) != CollectionUtils.size(products)) {
-                throw new ElementNotFoundException(String.format("Products [%s] some products are invalid", ids));
-            }
+            verifyProductUpdateValid(item, products, ids);
 
             final var productsDomainToAdd = getProductDomains(item, products);
             model.setProducts(productsDomainToAdd);
@@ -74,17 +73,25 @@ public class UpdateOrderUseCase implements IUpdateUseCase<OrderUpdateDto, OrderD
         }
     }
 
-    // TODO - Refatorar este método
+    private void verifyProductUpdateValid(OrderUpdateDto item, List<ProductModel> products, List<String> ids) {
+        if (CollectionUtils.size(item.getProducts()) != CollectionUtils.size(products)) {
+            throw new ElementNotFoundException(String.format("Products [%s] some products are invalid", ids));
+        }
+    }
+
     private List<ProductDomain> getProductDomains(OrderUpdateDto item, List<ProductModel> products) {
-        final var productDomainMap = products.stream()
+
+        final Map<String, ProductDomain> productDomainMap = products.stream()
                 .collect(Collectors.toMap(ProductModel::getId, iProductMapper::toDomain));
+
         final var productsDomainToAdd = new ArrayList<ProductDomain>();
 
-        for (ItemQuantityDto itemX : item.getProducts()) {
-            for (int i = 0; i < itemX.getQtd(); i++) {
-                productsDomainToAdd.add(productDomainMap.get(itemX.getId()));
+        for (ItemQuantityDto itemQuantity : item.getProducts()) {
+            for (int i = 0; i < itemQuantity.getQtd(); i++) {
+                productsDomainToAdd.add(productDomainMap.get(itemQuantity.getId()));
             }
         }
+
         return productsDomainToAdd;
     }
 }

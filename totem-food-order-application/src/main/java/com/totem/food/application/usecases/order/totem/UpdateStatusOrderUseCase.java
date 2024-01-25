@@ -16,7 +16,6 @@ import com.totem.food.application.usecases.commons.IUpdateStatusUseCase;
 import com.totem.food.domain.order.enums.OrderStatusEnumDomain;
 import lombok.AllArgsConstructor;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
