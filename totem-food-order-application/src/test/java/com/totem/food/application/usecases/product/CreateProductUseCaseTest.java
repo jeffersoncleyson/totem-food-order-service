@@ -1,16 +1,20 @@
 package com.totem.food.application.usecases.product;
 
+import com.totem.food.application.exceptions.ElementExistsException;
 import com.totem.food.application.ports.in.dtos.category.CategoryDto;
 import com.totem.food.application.ports.in.dtos.product.ProductCreateDto;
 import com.totem.food.application.ports.in.dtos.product.ProductDto;
+import com.totem.food.application.ports.in.dtos.product.ProductFilterDto;
 import com.totem.food.application.ports.in.mappers.category.ICategoryMapper;
 import com.totem.food.application.ports.in.mappers.product.IProductMapper;
 import com.totem.food.application.ports.out.persistence.category.CategoryModel;
 import com.totem.food.application.ports.out.persistence.commons.ICreateRepositoryPort;
+import com.totem.food.application.ports.out.persistence.commons.ISearchRepositoryPort;
 import com.totem.food.application.ports.out.persistence.commons.ISearchUniqueRepositoryPort;
 import com.totem.food.application.ports.out.persistence.product.ProductModel;
 import com.totem.food.domain.category.CategoryDomain;
 import lombok.SneakyThrows;
+import mock.models.ProductModelMock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,11 +28,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,13 +56,17 @@ class CreateProductUseCaseTest {
     @Mock
     private ISearchUniqueRepositoryPort<Optional<CategoryModel>> iSearchRepositoryPort;
 
+    @Mock
+    private ISearchRepositoryPort<ProductFilterDto, List<ProductModel>> iSearchProductRepositoryPort;
+
     private CreateProductUseCase createProductUseCase;
     private AutoCloseable closeable;
 
     @BeforeEach
     void beforeEach() {
         closeable = MockitoAnnotations.openMocks(this);
-        createProductUseCase = new CreateProductUseCase(iProductMapper, iCategoryMapper, iProductRepositoryPort, iSearchRepositoryPort);
+        createProductUseCase = new CreateProductUseCase(iProductMapper, iCategoryMapper, iProductRepositoryPort,
+                iSearchRepositoryPort, iSearchProductRepositoryPort);
     }
 
     @SneakyThrows
@@ -112,6 +125,7 @@ class CreateProductUseCaseTest {
         //### Given - Mocks
         when(iSearchRepositoryPort.findById(Mockito.anyString())).thenReturn(Optional.of(categoryModel));
         when(iProductRepositoryPort.saveItem(Mockito.any(ProductModel.class))).thenReturn(productDomain);
+        when(iSearchProductRepositoryPort.findAll(any(ProductFilterDto.class))).thenReturn(List.of());
 
         //### When
         final var productDtoUseCase = createProductUseCase.createItem(productCreateDto);
@@ -130,5 +144,46 @@ class CreateProductUseCaseTest {
         assertNotNull(productDtoUseCase.getCreateAt());
         assertNotNull(productDtoUseCase.getModifiedAt());
     }
+
+
+    @Test
+    void createItemWhenElementExistsException() {
+
+        //### Given - Objects and Values
+        final var id = UUID.randomUUID().toString();
+        final var name = "Coca-cola";
+        final var description = "description";
+        final var image = "https://mybucket.s3.amazonaws.com/myfolder/afile.jpg";
+        final var price = 10D * (Math.random() + 1);
+        final var category = "Refrigerante";
+
+        final var productCreateDto = new ProductCreateDto(
+                name,
+                description,
+                image,
+                price,
+                category
+        );
+
+        final var productModel = ProductModelMock.getMock(id);
+
+        //### Given - Mocks
+        when(iSearchProductRepositoryPort.findAll(any(ProductFilterDto.class))).thenReturn(List.of(productModel));
+
+        //### When
+        final var exception = assertThrows(ElementExistsException.class,
+                () -> createProductUseCase.createItem(productCreateDto));
+
+        //### Then
+        assertEquals(String.format("Product with name [%s] already exists", productCreateDto.getName()), exception.getMessage());
+
+        verify(iProductMapper, times(1)).toDomain(Mockito.any(ProductCreateDto.class));
+        verify(iSearchProductRepositoryPort, times(1)).findAll(any(ProductFilterDto.class));
+        verify(iCategoryMapper, never()).toDomain(Mockito.any(CategoryModel.class));
+        verify(iSearchRepositoryPort, never()).findById(Mockito.anyString());
+        verify(iProductRepositoryPort, never()).saveItem(Mockito.any(ProductModel.class));
+        verify(iProductMapper, never()).toDto(Mockito.any(ProductModel.class));
+    }
+
 
 }
