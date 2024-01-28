@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.totem.food.application.ports.in.dtos.customer.CustomerDto;
 import com.totem.food.application.ports.in.dtos.order.admin.OrderAdminDto;
 import com.totem.food.application.ports.in.dtos.order.admin.OrderAdminFilterDto;
+import com.totem.food.application.usecases.commons.IDeleteUseCase;
 import com.totem.food.application.usecases.commons.ISearchUseCase;
 import com.totem.food.framework.test.utils.TestUtils;
 import org.apache.commons.collections4.CollectionUtils;
@@ -46,13 +47,16 @@ class AdministrativeOrderRestApiAdapterTest {
     @Mock
     private ISearchUseCase<OrderAdminFilterDto, List<OrderAdminDto>> iSearchOrderUseCase;
 
+    @Mock
+    private IDeleteUseCase<String, OrderAdminDto> iDeleteUseCase;
+
     private MockMvc mockMvc;
     private AutoCloseable autoCloseable;
 
     @BeforeEach
     void setup() {
         autoCloseable = MockitoAnnotations.openMocks(this);
-        final var administrativeOrderRestApiAdapter = new AdministrativeOrderRestApiAdapter(iSearchOrderUseCase);
+        final var administrativeOrderRestApiAdapter = new AdministrativeOrderRestApiAdapter(iSearchOrderUseCase, iDeleteUseCase);
         mockMvc = MockMvcBuilders.standaloneSetup(administrativeOrderRestApiAdapter).build();
     }
 
