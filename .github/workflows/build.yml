@@ -51,7 +51,7 @@ jobs:
       - name: Upload Artifact Jar
         uses: actions/upload-artifact@v3
         with:
-          name: totem-food-order-serviceervice
+          name: totem-food-order-service
           path: ./totem-food-order-backend/target/*.jar
           retention-days: 1
 
