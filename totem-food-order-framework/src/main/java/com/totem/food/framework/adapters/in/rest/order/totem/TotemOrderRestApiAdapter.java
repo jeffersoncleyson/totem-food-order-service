@@ -81,7 +81,7 @@ public class TotemOrderRestApiAdapter implements ICreateRestApiPort<OrderCreateD
     @PutMapping(value = ORDER_ID_AND_STATUS, produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public ResponseEntity<OrderDto> update(@PathVariable(name = "orderId") String id, @PathVariable(name = "statusName") String status) {
-        final var orderDto = iUpdateStatusUseCase.updateStatus(id, status);
+        final var orderDto = iUpdateStatusUseCase.updateStatus(id, status, false);
         return ResponseEntity.status(HttpStatus.OK).body(orderDto);
     }
 

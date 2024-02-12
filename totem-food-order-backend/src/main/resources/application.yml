@@ -42,7 +42,15 @@ app:
 
 ms:
   internal:
+    queue:
+        payment_update_order: ${PAYMENT_QUEUE_UPDATE_ORDER:payment-update-order-queue}
     payment:
       url: ${MS_INTERNAL_PAYMENT:http://localhost:8082}
     customer:
       url: ${MS_INTERNAL_CUSTOMER:http://localhost:8081}
+
+localstack:
+  endpoint: http://localhost:4566
+  region: us-east-1
+  accessKey: teste
+  secretKey: teste
