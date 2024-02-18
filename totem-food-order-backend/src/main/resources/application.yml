@@ -24,16 +24,6 @@ spring:
     mongodb:
       uri: ${ORDER_MONGODB_URI:mongodb://root:qwe123@localhost:27017/totem-food-order?authSource=admin}
 
-mail:
-  smtp:
-    host: ${SMTP_HOST:localhost}
-    port: ${SMTP_PORT:1025}
-    username: ${SMTP_USERNAME:username}
-    password: ${SMTP_PASSWORD:password}
-    auth: ${SMTP_AUTH_ENABLED:false}
-    tls: ${SMTP_TLS_ENABLED:false}
-    email: ${SMTP_EMAIL:contato@totem.food.service.com.br}
-
 app:
   version: ^project.version^
   name: ^project.name^
@@ -42,6 +32,8 @@ app:
 
 ms:
   internal:
+    topic:
+      payment: ${PAYMENT_TOPIC:payment-topic}
     queue:
         payment_update_order: ${PAYMENT_QUEUE_UPDATE_ORDER:payment-update-order-queue}
     payment:
