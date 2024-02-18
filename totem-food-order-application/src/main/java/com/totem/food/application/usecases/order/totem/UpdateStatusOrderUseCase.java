@@ -18,6 +18,7 @@ import com.totem.food.application.usecases.commons.IUpdateStatusUseCase;
 import com.totem.food.domain.order.enums.OrderStatusEnumDomain;
 import lombok.AllArgsConstructor;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -50,17 +51,12 @@ public class UpdateStatusOrderUseCase implements IUpdateStatusUseCase<OrderDto> 
         domain.updateModifiedAt();
 
         if (domain.getStatus().equals(OrderStatusEnumDomain.RECEIVED) && !isEvent) {
-
-            // final var paymentFilter = PaymentFilterDto.builder().orderId(domain.getId()).status("COMPLETED").build();
-            // final var hasPayment = iSendRequestPaymentPort.sendRequest(paymentFilter);
-            //if(!hasPayment)
-            //    throw new ElementNotFoundException(String.format("Order [%s] needs a payment request or Payment is PENDING", id));
             throw new InvalidInput(String.format("Order [%s] needs a payment request or Payment is PENDING", id));
         }
 
-        if (domain.getStatus().equals(OrderStatusEnumDomain.READY)) {
+        if (List.of(OrderStatusEnumDomain.READY, OrderStatusEnumDomain.RECEIVED).contains(domain.getStatus())) {
             iSearchUniqueCustomerRepositoryPort.sendRequest(domain.getCustomer())
-                    .map(CustomerResponse::getEmail).ifPresent(sendEmail(id));
+                    .map(CustomerResponse::getEmail).ifPresent(sendEmail(id, domain.getStatus()));
         }
 
         final var domainValidated = iOrderMapper.toModel(domain);
@@ -75,10 +71,14 @@ public class UpdateStatusOrderUseCase implements IUpdateStatusUseCase<OrderDto> 
         return iOrderMapper.toDto(domainSaved);
     }
 
-    private Consumer<String> sendEmail(String id) {
+    private Consumer<String> sendEmail(String id, OrderStatusEnumDomain status) {
         return email -> {
             final var subject = String.format("[%s] Pedido %s", "Totem Food Service", id);
-            final var message = String.format("Pedido %s acabou de ser finalizado pela cozinha, em instantes o atendente ira chama-lo!", id);
+            var message = "";
+            if(status.equals(OrderStatusEnumDomain.READY))
+                message = String.format("Pedido %s acabou de ser finalizado pela cozinha, em instantes o atendente ira chama-lo!", id);
+            if(status.equals(OrderStatusEnumDomain.RECEIVED))
+                message = String.format("Pedido %s recebido pela cozinha, em instantes nosso chefes irão prepara-lo!", id);
             iSendEmailEventPort.sendMessage(new EmailNotificationDto(email, subject, message));
         };
     }

@@ -5,7 +5,9 @@ import com.totem.food.application.ports.in.dtos.customer.CustomerResponse;
 import com.totem.food.application.ports.in.dtos.payment.PaymentFilterDto;
 import com.totem.food.application.ports.in.mappers.order.totem.IOrderMapper;
 import com.totem.food.application.ports.out.dtos.EmailNotificationDto;
+import com.totem.food.application.ports.out.dtos.PaymentNotificationDto;
 import com.totem.food.application.ports.out.email.ISendEmailPort;
+import com.totem.food.application.ports.out.event.ISendEventPort;
 import com.totem.food.application.ports.out.persistence.commons.ISearchUniqueRepositoryPort;
 import com.totem.food.application.ports.out.persistence.commons.IUpdateRepositoryPort;
 import com.totem.food.application.ports.out.persistence.order.totem.OrderModel;
@@ -35,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -54,13 +57,16 @@ class UpdateStatusOrderUseCaseTest {
     private IUpdateRepositoryPort<OrderModel> iProductRepositoryPort;
 
     @Mock
-    private ISendEmailPort<EmailNotificationDto, Boolean> iSendEmailPort;
+    private ISendEventPort<EmailNotificationDto, Boolean> iSendEmailEventPort;
 
     @Mock
     private ISendRequestPort<PaymentFilterDto, Boolean> iSendRequestPaymentPort;
 
     @Mock
     private ISendRequestPort<String, Optional<CustomerResponse>> iSearchUniqueCustomerRepositoryPort;
+
+    @Mock
+    private ISendEventPort<PaymentNotificationDto, Boolean> sendEventPort;
 
     private UpdateStatusOrderUseCase updateStatusOrderUseCase;
 
@@ -69,8 +75,15 @@ class UpdateStatusOrderUseCaseTest {
     @BeforeEach
     void setUp() {
         closeable = MockitoAnnotations.openMocks(this);
-        updateStatusOrderUseCase = new UpdateStatusOrderUseCase(iOrderMapper, iSearchUniqueRepositoryPort,
-                iProductRepositoryPort, iSendEmailPort, iSendRequestPaymentPort, iSearchUniqueCustomerRepositoryPort);
+        updateStatusOrderUseCase = new UpdateStatusOrderUseCase(
+                iOrderMapper,
+                iSearchUniqueRepositoryPort,
+                iProductRepositoryPort,
+                iSendEmailEventPort,
+                iSendRequestPaymentPort,
+                iSearchUniqueCustomerRepositoryPort,
+                sendEventPort
+        );
     }
 
     @SneakyThrows
@@ -101,13 +114,13 @@ class UpdateStatusOrderUseCaseTest {
         when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.of(orderModel));
         when(iOrderMapper.toDomain(any(OrderModel.class))).thenReturn(orderDomain);
         when(iSearchUniqueCustomerRepositoryPort.sendRequest(anyString())).thenReturn(Optional.of(customerResponse));
-        when(iSendEmailPort.sendEmail(any(EmailNotificationDto.class))).thenReturn(Boolean.valueOf(id));
+        when(iSendEmailEventPort.sendMessage(any(EmailNotificationDto.class))).thenReturn(Boolean.valueOf(id));
         when(iOrderMapper.toModel(any(OrderDomain.class))).thenReturn(orderModel);
         when(iProductRepositoryPort.updateItem(any(OrderModel.class))).thenReturn(orderModel);
         when(iOrderMapper.toDto(any(OrderModel.class))).thenReturn(orderDto);
 
         //## When
-        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.READY.toString());
+        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.READY.toString(), false);
 
         //## Then
         assertNotNull(result);
@@ -133,7 +146,7 @@ class UpdateStatusOrderUseCaseTest {
 
         //## When
         var exception = assertThrows(ElementNotFoundException.class,
-                () -> updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString()));
+                () -> updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString(), false));
 
         //## Then
         assertEquals(String.format("Order [%s] needs a payment request or Payment is PENDING", id), exception.getMessage());
@@ -153,7 +166,7 @@ class UpdateStatusOrderUseCaseTest {
         when(iOrderMapper.toDto(any(OrderModel.class))).thenReturn(orderDto);
 
         //## When
-        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString());
+        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString(), false);
 
         //## Then
         assertThat(result).usingRecursiveComparison().isNotNull();
@@ -173,7 +186,7 @@ class UpdateStatusOrderUseCaseTest {
 
         //## When
         var exception = assertThrows(ElementNotFoundException.class,
-                () -> updateStatusOrderUseCase.updateStatus(id, anyString()));
+                () -> updateStatusOrderUseCase.updateStatus(id, anyString(), anyBoolean()));
 
         //## Then
         assertEquals(String.format("Order [%s] not found", id), exception.getMessage());
