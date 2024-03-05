@@ -4,7 +4,6 @@ import com.totem.food.application.exceptions.ElementNotFoundException;
 import com.totem.food.application.exceptions.InvalidInput;
 import com.totem.food.application.ports.in.dtos.customer.CustomerResponse;
 import com.totem.food.application.ports.in.dtos.order.totem.OrderDto;
-import com.totem.food.application.ports.in.dtos.payment.PaymentFilterDto;
 import com.totem.food.application.ports.in.mappers.order.totem.IOrderMapper;
 import com.totem.food.application.ports.out.dtos.EmailNotificationDto;
 import com.totem.food.application.ports.out.dtos.PaymentNotificationDto;
@@ -30,7 +29,6 @@ public class UpdateStatusOrderUseCase implements IUpdateStatusUseCase<OrderDto> 
     private final ISearchUniqueRepositoryPort<Optional<OrderModel>> iSearchUniqueRepositoryPort;
     private final IUpdateRepositoryPort<OrderModel> iProductRepositoryPort;
     private final ISendEventPort<EmailNotificationDto, Boolean> iSendEmailEventPort;
-    private final ISendRequestPort<PaymentFilterDto, Boolean> iSendRequestPaymentPort;
     private final ISendRequestPort<String, Optional<CustomerResponse>> iSearchUniqueCustomerRepositoryPort;
     private final ISendEventPort<PaymentNotificationDto, Boolean> sendEventPort;
 
@@ -39,7 +37,8 @@ public class UpdateStatusOrderUseCase implements IUpdateStatusUseCase<OrderDto> 
 
         final var orderModelOptional = iSearchUniqueRepositoryPort.findById(id);
 
-        final var model = orderModelOptional.orElseThrow(() -> new ElementNotFoundException(String.format("Order [%s] not found", id)));
+        final var model = orderModelOptional.orElseThrow(() ->
+                new ElementNotFoundException(String.format("Order [%s] not found", id)));
 
         if (model.getStatus().equals(OrderStatusEnumDomain.from(status))) {
             return iOrderMapper.toDto(model);

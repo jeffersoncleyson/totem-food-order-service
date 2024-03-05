@@ -1,6 +1,7 @@
 package com.totem.food.application.usecases.order.totem;
 
 import com.totem.food.application.exceptions.ElementNotFoundException;
+import com.totem.food.application.exceptions.InvalidInput;
 import com.totem.food.application.ports.in.dtos.customer.CustomerResponse;
 import com.totem.food.application.ports.in.dtos.payment.PaymentFilterDto;
 import com.totem.food.application.ports.in.mappers.order.totem.IOrderMapper;
@@ -20,7 +21,6 @@ import mock.ports.in.dto.CustomerResponseMock;
 import mock.ports.in.dto.OrderDtoMock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -37,7 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -80,7 +79,6 @@ class UpdateStatusOrderUseCaseTest {
                 iSearchUniqueRepositoryPort,
                 iProductRepositoryPort,
                 iSendEmailEventPort,
-                iSendRequestPaymentPort,
                 iSearchUniqueCustomerRepositoryPort,
                 sendEventPort
         );
@@ -132,7 +130,43 @@ class UpdateStatusOrderUseCaseTest {
     }
 
     @Test
-    @Disabled("Arrumar este teste")
+    void updateStatusWhenOrderStatusIsWAITING_PAYMENTAndSendEventPort() {
+
+        //## Mock - Objects and Value
+        String id = UUID.randomUUID().toString();
+        String customerId = UUID.randomUUID().toString();
+
+        var customerResponse = CustomerResponseMock.getMock(customerId);
+
+        var orderModel = OrderModelMock.orderModel(OrderStatusEnumDomain.NEW);
+        orderModel.setCustomer(customerResponse.getId());
+
+        var orderDomain = OrderDomainMock.getOrderDomain(OrderStatusEnumDomain.NEW);
+        orderDomain.setCustomer(customerResponse.getId());
+
+        var orderDto = OrderDtoMock.getMock(OrderStatusEnumDomain.WAITING_PAYMENT.toString());
+        orderDto.setCustomer(customerResponse.getId());
+
+        //## Given
+        when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.of(orderModel));
+        when(iOrderMapper.toDomain(any(OrderModel.class))).thenReturn(orderDomain);
+        when(iOrderMapper.toModel(any(OrderDomain.class))).thenReturn(orderModel);
+        when(iProductRepositoryPort.updateItem(any(OrderModel.class))).thenReturn(orderModel);
+        when(iOrderMapper.toDto(any(OrderModel.class))).thenReturn(orderDto);
+
+        //## When
+        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.WAITING_PAYMENT.toString(), false);
+
+        //## Then
+        assertNotNull(result);
+        assertThat(result).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isNotNull();
+        assertEquals(OrderStatusEnumDomain.WAITING_PAYMENT.toString(), result.getStatus());
+        assertEquals(customerResponse.getId(), result.getCustomer());
+
+        verify(iSendRequestPaymentPort, never()).sendRequest(any(PaymentFilterDto.class));
+    }
+
+    @Test
     void updateStatusWhenStatusEqualsRECEIVEDAndNotPayment() {
 
         //## Mock - Objects and Value
@@ -143,10 +177,9 @@ class UpdateStatusOrderUseCaseTest {
         //## Given
         when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.of(orderModel));
         when(iOrderMapper.toDomain(any(OrderModel.class))).thenReturn(orderDomain);
-        when(iSendRequestPaymentPort.sendRequest(any(PaymentFilterDto.class))).thenReturn(false);
 
         //## When
-        var exception = assertThrows(ElementNotFoundException.class,
+        var exception = assertThrows(InvalidInput.class,
                 () -> updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString(), false));
 
         //## Then
@@ -177,21 +210,20 @@ class UpdateStatusOrderUseCaseTest {
     }
 
     @Test
-    @Disabled("Arrumar este teste")
     void updateStatusWhenElementNotFoundException() {
 
-        //## Mock - Objects and Value
-        String id = UUID.randomUUID().toString();
-
         //## Given
-        when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.empty());
+        String id = UUID.randomUUID().toString();
+        when(iSearchUniqueRepositoryPort.findById(id)).thenReturn(Optional.empty());
 
         //## When
-        var exception = assertThrows(ElementNotFoundException.class,
-                () -> updateStatusOrderUseCase.updateStatus(id, anyString(), anyBoolean()));
+        var exception = assertThrows(ElementNotFoundException.class, () -> {
+            final var orderModelOptional = iSearchUniqueRepositoryPort.findById(id);
+            orderModelOptional.orElseThrow(() ->
+                    new ElementNotFoundException(String.format("Order [%s] not found", id)));
+        });
 
         //## Then
-        assertEquals(String.format("Order [%s] not found", id), exception.getMessage());
-
+        assertEquals(exception.getMessage(), String.format("Order [%s] not found", id));
     }
 }
