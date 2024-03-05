@@ -6,7 +6,6 @@ import com.totem.food.application.ports.in.dtos.payment.PaymentFilterDto;
 import com.totem.food.application.ports.in.mappers.order.totem.IOrderMapper;
 import com.totem.food.application.ports.out.dtos.EmailNotificationDto;
 import com.totem.food.application.ports.out.dtos.PaymentNotificationDto;
-import com.totem.food.application.ports.out.email.ISendEmailPort;
 import com.totem.food.application.ports.out.event.ISendEventPort;
 import com.totem.food.application.ports.out.persistence.commons.ISearchUniqueRepositoryPort;
 import com.totem.food.application.ports.out.persistence.commons.IUpdateRepositoryPort;
