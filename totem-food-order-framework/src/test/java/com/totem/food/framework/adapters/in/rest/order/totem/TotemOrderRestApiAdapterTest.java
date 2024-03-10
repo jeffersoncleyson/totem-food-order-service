@@ -44,6 +44,7 @@ import static com.totem.food.domain.order.enums.OrderStatusEnumDomain.WAITING_PA
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
@@ -256,7 +257,7 @@ class TotemOrderRestApiAdapterTest {
         var orderDto = OrderDtoMock.getMock(WAITING_PAYMENT.toString());
 
         //## Given
-        when(iUpdateStatusUseCase.updateStatus(anyString(), anyString())).thenReturn(orderDto);
+        when(iUpdateStatusUseCase.updateStatus(anyString(), anyString(), anyBoolean())).thenReturn(orderDto);
 
         final var json = TestUtils.toJSON(orderDto).orElseThrow();
         final var httpServletRequest = put(endpoint, orderDto.getId(), NEW.toString())
@@ -282,7 +283,7 @@ class TotemOrderRestApiAdapterTest {
 
         assertEquals(orderDtoResponse.getStatus(), WAITING_PAYMENT.toString());
 
-        verify(iUpdateStatusUseCase, times(1)).updateStatus(anyString(), anyString());
+        verify(iUpdateStatusUseCase, times(1)).updateStatus(anyString(), anyString(), anyBoolean());
     }
 
     @ParameterizedTest

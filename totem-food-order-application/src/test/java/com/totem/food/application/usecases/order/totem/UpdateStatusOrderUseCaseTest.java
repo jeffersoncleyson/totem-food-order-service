@@ -1,11 +1,13 @@
 package com.totem.food.application.usecases.order.totem;
 
 import com.totem.food.application.exceptions.ElementNotFoundException;
+import com.totem.food.application.exceptions.InvalidInput;
 import com.totem.food.application.ports.in.dtos.customer.CustomerResponse;
 import com.totem.food.application.ports.in.dtos.payment.PaymentFilterDto;
 import com.totem.food.application.ports.in.mappers.order.totem.IOrderMapper;
 import com.totem.food.application.ports.out.dtos.EmailNotificationDto;
-import com.totem.food.application.ports.out.email.ISendEmailPort;
+import com.totem.food.application.ports.out.dtos.PaymentNotificationDto;
+import com.totem.food.application.ports.out.event.ISendEventPort;
 import com.totem.food.application.ports.out.persistence.commons.ISearchUniqueRepositoryPort;
 import com.totem.food.application.ports.out.persistence.commons.IUpdateRepositoryPort;
 import com.totem.food.application.ports.out.persistence.order.totem.OrderModel;
@@ -54,13 +56,16 @@ class UpdateStatusOrderUseCaseTest {
     private IUpdateRepositoryPort<OrderModel> iProductRepositoryPort;
 
     @Mock
-    private ISendEmailPort<EmailNotificationDto, Boolean> iSendEmailPort;
+    private ISendEventPort<EmailNotificationDto, Boolean> iSendEmailEventPort;
 
     @Mock
     private ISendRequestPort<PaymentFilterDto, Boolean> iSendRequestPaymentPort;
 
     @Mock
     private ISendRequestPort<String, Optional<CustomerResponse>> iSearchUniqueCustomerRepositoryPort;
+
+    @Mock
+    private ISendEventPort<PaymentNotificationDto, Boolean> sendEventPort;
 
     private UpdateStatusOrderUseCase updateStatusOrderUseCase;
 
@@ -69,8 +74,14 @@ class UpdateStatusOrderUseCaseTest {
     @BeforeEach
     void setUp() {
         closeable = MockitoAnnotations.openMocks(this);
-        updateStatusOrderUseCase = new UpdateStatusOrderUseCase(iOrderMapper, iSearchUniqueRepositoryPort,
-                iProductRepositoryPort, iSendEmailPort, iSendRequestPaymentPort, iSearchUniqueCustomerRepositoryPort);
+        updateStatusOrderUseCase = new UpdateStatusOrderUseCase(
+                iOrderMapper,
+                iSearchUniqueRepositoryPort,
+                iProductRepositoryPort,
+                iSendEmailEventPort,
+                iSearchUniqueCustomerRepositoryPort,
+                sendEventPort
+        );
     }
 
     @SneakyThrows
@@ -101,18 +112,55 @@ class UpdateStatusOrderUseCaseTest {
         when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.of(orderModel));
         when(iOrderMapper.toDomain(any(OrderModel.class))).thenReturn(orderDomain);
         when(iSearchUniqueCustomerRepositoryPort.sendRequest(anyString())).thenReturn(Optional.of(customerResponse));
-        when(iSendEmailPort.sendEmail(any(EmailNotificationDto.class))).thenReturn(Boolean.valueOf(id));
+        when(iSendEmailEventPort.sendMessage(any(EmailNotificationDto.class))).thenReturn(Boolean.valueOf(id));
         when(iOrderMapper.toModel(any(OrderDomain.class))).thenReturn(orderModel);
         when(iProductRepositoryPort.updateItem(any(OrderModel.class))).thenReturn(orderModel);
         when(iOrderMapper.toDto(any(OrderModel.class))).thenReturn(orderDto);
 
         //## When
-        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.READY.toString());
+        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.READY.toString(), false);
 
         //## Then
         assertNotNull(result);
         assertThat(result).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isNotNull();
         assertEquals(OrderStatusEnumDomain.READY.toString(), result.getStatus());
+        assertEquals(customerResponse.getId(), result.getCustomer());
+
+        verify(iSendRequestPaymentPort, never()).sendRequest(any(PaymentFilterDto.class));
+    }
+
+    @Test
+    void updateStatusWhenOrderStatusIsWAITING_PAYMENTAndSendEventPort() {
+
+        //## Mock - Objects and Value
+        String id = UUID.randomUUID().toString();
+        String customerId = UUID.randomUUID().toString();
+
+        var customerResponse = CustomerResponseMock.getMock(customerId);
+
+        var orderModel = OrderModelMock.orderModel(OrderStatusEnumDomain.NEW);
+        orderModel.setCustomer(customerResponse.getId());
+
+        var orderDomain = OrderDomainMock.getOrderDomain(OrderStatusEnumDomain.NEW);
+        orderDomain.setCustomer(customerResponse.getId());
+
+        var orderDto = OrderDtoMock.getMock(OrderStatusEnumDomain.WAITING_PAYMENT.toString());
+        orderDto.setCustomer(customerResponse.getId());
+
+        //## Given
+        when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.of(orderModel));
+        when(iOrderMapper.toDomain(any(OrderModel.class))).thenReturn(orderDomain);
+        when(iOrderMapper.toModel(any(OrderDomain.class))).thenReturn(orderModel);
+        when(iProductRepositoryPort.updateItem(any(OrderModel.class))).thenReturn(orderModel);
+        when(iOrderMapper.toDto(any(OrderModel.class))).thenReturn(orderDto);
+
+        //## When
+        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.WAITING_PAYMENT.toString(), false);
+
+        //## Then
+        assertNotNull(result);
+        assertThat(result).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isNotNull();
+        assertEquals(OrderStatusEnumDomain.WAITING_PAYMENT.toString(), result.getStatus());
         assertEquals(customerResponse.getId(), result.getCustomer());
 
         verify(iSendRequestPaymentPort, never()).sendRequest(any(PaymentFilterDto.class));
@@ -129,11 +177,10 @@ class UpdateStatusOrderUseCaseTest {
         //## Given
         when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.of(orderModel));
         when(iOrderMapper.toDomain(any(OrderModel.class))).thenReturn(orderDomain);
-        when(iSendRequestPaymentPort.sendRequest(any(PaymentFilterDto.class))).thenReturn(false);
 
         //## When
-        var exception = assertThrows(ElementNotFoundException.class,
-                () -> updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString()));
+        var exception = assertThrows(InvalidInput.class,
+                () -> updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString(), false));
 
         //## Then
         assertEquals(String.format("Order [%s] needs a payment request or Payment is PENDING", id), exception.getMessage());
@@ -153,7 +200,7 @@ class UpdateStatusOrderUseCaseTest {
         when(iOrderMapper.toDto(any(OrderModel.class))).thenReturn(orderDto);
 
         //## When
-        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString());
+        var result = updateStatusOrderUseCase.updateStatus(id, OrderStatusEnumDomain.RECEIVED.toString(), false);
 
         //## Then
         assertThat(result).usingRecursiveComparison().isNotNull();
@@ -165,18 +212,18 @@ class UpdateStatusOrderUseCaseTest {
     @Test
     void updateStatusWhenElementNotFoundException() {
 
-        //## Mock - Objects and Value
-        String id = UUID.randomUUID().toString();
-
         //## Given
-        when(iSearchUniqueRepositoryPort.findById(anyString())).thenReturn(Optional.empty());
+        String id = UUID.randomUUID().toString();
+        when(iSearchUniqueRepositoryPort.findById(id)).thenReturn(Optional.empty());
 
         //## When
-        var exception = assertThrows(ElementNotFoundException.class,
-                () -> updateStatusOrderUseCase.updateStatus(id, anyString()));
+        var exception = assertThrows(ElementNotFoundException.class, () -> {
+            final var orderModelOptional = iSearchUniqueRepositoryPort.findById(id);
+            orderModelOptional.orElseThrow(() ->
+                    new ElementNotFoundException(String.format("Order [%s] not found", id)));
+        });
 
         //## Then
-        assertEquals(String.format("Order [%s] not found", id), exception.getMessage());
-
+        assertEquals(exception.getMessage(), String.format("Order [%s] not found", id));
     }
 }
